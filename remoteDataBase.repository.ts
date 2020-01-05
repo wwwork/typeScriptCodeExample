@@ -1,9 +1,9 @@
-import {ModelClass, Page, QueryBuilder, raw, ref, Reference, Transaction} from 'objection';
-import {RemoteDb} from '../models/remoteDb.model';
-import {BaseRepository} from './base.repository';
-import {Inject, Injectable} from '@nestjs/common';
+import { ModelClass, Page, QueryBuilder, raw, ref, Reference, Transaction} from 'objection';
+import { RemoteDb } from '../models/remoteDb.model';
+import { BaseRepository } from './base.repository';
+import { Inject, Injectable } from '@nestjs/common';
 import * as _ from 'lodash/fp';
-import {configInstance} from '../core/config';
+import { configInstance } from '../core/config';
 
 // todo add payments to remote database
 
@@ -15,7 +15,7 @@ export class RemoteDataBaseRepository extends BaseRepository<RemoteDb> {
   ) {
     super();
   }
-
+  // get task for sync from Sync table
   public async getAvailableDataForSynchronize() {
     try {
       return await this.findAll();
@@ -24,7 +24,7 @@ export class RemoteDataBaseRepository extends BaseRepository<RemoteDb> {
     }
   }
 
-  // universal query to move in to remote table
+  // universal query to move in to remote tables
   public async moveToRemoteTable(objectToMove: RemoteDb) {
     try {
       // @ts-ignore
@@ -52,14 +52,9 @@ export class RemoteDataBaseRepository extends BaseRepository<RemoteDb> {
     // create TEMP TABLE FOR CURRENT SESSION
     const queryRaw = this.modelClass.knex();
     // select nextval
-    const nextVal = await queryRaw.raw(`select nextval(pg_get_serial_sequence('${tableName}_main', 'id'));`);
-    const nextValAccountsMain = Number(nextVal.rows[0].nextval);
-    await this.createSequence(`${tableName}_main`, nextValAccountsMain, true);
-    await queryRaw.raw(`DROP TABLE IF EXISTS ${tableName};`);
-    await queryRaw.raw(`CREATE TABLE ${tableName} (LIKE ${tableName}_main INCLUDING ALL);`);
+    await this.createSequence(`${tableName}_main`,true);
     // CREATE SEQUENCE FOR accounts temp TABLE BLOCK
-    await this.createSequence(tableName, nextValAccountsMain, true);
-    await queryRaw.raw(`insert INTO ${tableName} SELECT * FROM ${tableName}_main;`);
+    await this.createSequence(tableName, true);
     // add trigger to new Accounts table
     await queryRaw.raw(this.returnTriggerProcedure(tableName));
   }
@@ -68,7 +63,7 @@ export class RemoteDataBaseRepository extends BaseRepository<RemoteDb> {
   // ## REMOTE DB FLOW SUPPORT METHODs -----------------
   // ###################################################
 
-  // prepareObject stringify database data to insert database
+  // create Universal trigger for TEMP table
   returnTriggerProcedure(tableName: string) {
     return `
     drop trigger  IF EXISTS fn_${tableName}_add_to_sync_table  on ${tableName};
@@ -127,6 +122,7 @@ export class RemoteDataBaseRepository extends BaseRepository<RemoteDb> {
     // const objectForInsert = dataToMoveIntoRemote.rows[0];
     const updateData = dataToMoveIntoRemote.rows[0];
     const columnsAndData = await this.generateColumnsForInsertQuery(updateData);
+    // todo add method to return INSERT QUERY
     const idForUpdate = updateData.id;
     let query = `INSERT INTO "${objectToMove.tableName}_main" VALUES( ${columnsAndData} );`;
     // update table
@@ -140,7 +136,7 @@ export class RemoteDataBaseRepository extends BaseRepository<RemoteDb> {
   // call UPDATE method depends on RemoteDb.operationType
   public async UPDATE(objectToMove: RemoteDb) {
     const queryRaw = this.modelClass.knex();
-    // select data to move into remote table
+    // gets data to move into remote table
     const dataToMoveIntoRemote = await queryRaw.raw(
       `SELECT * FROM ${objectToMove.tableName}  WHERE id = ${objectToMove.recordId};`
     );
