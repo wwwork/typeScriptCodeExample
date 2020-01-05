@@ -1,9 +1,9 @@
-import {BadRequestException, Injectable} from '@nestjs/common';
-import {Logger} from '../core/logger';
-import {RemoteDataBaseRepository} from '../repositories/remoteDataBase.repository';
-import {RemoteDb} from '../models/remoteDb.model';
-import {CacheService} from './cache.service';
-import {configInstance} from '../core/config';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { Logger } from '../core/logger';
+import { RemoteDataBaseRepository } from '../repositories/remoteDataBase.repository';
+import { RemoteDb } from '../models/remoteDb.model';
+import { CacheService } from './cache.service';
+import { configInstance } from '../core/config';
 
 @Injectable()
 export class RemoteDbService {
@@ -14,7 +14,7 @@ export class RemoteDbService {
   ) {
   }
 
-  // create temp  Union Tables
+  // create temp  Union Tables from remote Tables
   async createUnionTables(): Promise<void> {
     try {
       const tables = configInstance.remoteDb.tables;
